@@ -43,7 +43,7 @@ const int variants_of_move = sizeof(neighboor) / sizeof(neighboor[0]);
 const int cell_colour[] = { 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 const int quan_cell_colour = sizeof(cell_colour) / sizeof(cell_colour[0]);
 
-int year_cycle = 10, plants_year = 20, mutation = 5, meat_energy = 60, plant_energy = 20;
+int year_cycle = 10, plants_year = 20, putrefaction_year = 40, mutation = 5, meat_energy = 60, plant_energy = 20;
 const int type_of_reaction = 6, fill_start = 5;
 
 
@@ -53,7 +53,7 @@ int act_price[] = { 3, 2, 5, 2, 1, 50 };
 const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2, 4 };
 const int reaction_gens = 10, action_gens = 100;
 
-const char meat = 178, bush = 206, empt = ' ', alive = 219;
+const char meat = 177, bush = 206, empt = ' ', alive = 219;
 const int col_meat = 4, col_plants = 2;
 
 int rand(int left, int right) {
@@ -440,6 +440,10 @@ int main(int argc, int* argv[]) {
 							if (dist(gen) < plants_year)
 								place[i][j].set(bush, col_plants);
 						}
+						else if (place[i][j].c == meat) {
+							if (dist(gen) < putrefaction_year)
+								place[i][j].set(empt, 7);
+						}
 					}
 			}
 
@@ -515,6 +519,8 @@ int main(int argc, int* argv[]) {
 					cin >> year_cycle;
 				else if (cn == 'p')
 					cin >> plants_year;
+				else if (cn == 'g')
+					cin >> putrefaction_year;
 				else if (cn == 't')
 					cin >> timee;
 				system("cls");
