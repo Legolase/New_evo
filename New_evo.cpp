@@ -409,15 +409,20 @@ void del(vector<cell>& cells, const int index) {
 	cells.pop_back();
 }
 
-int main() {
+int main(int argc, int* argv[]) {
 	mt19937 gen{ random_device()() };
 	uniform_int_distribution<int> dist(0, 99);
 
-	const int outsize{ 40 }, insize{ 40 };
+	
+	int outsize{ 40 }, insize{ 40 };
 	int timee = 0;
 	int year{ -1 };
+	if (argc > 1) {
+		outsize = *argv[0];
+		insize = *argv[1];
+	}
 
-	while (true) {
+	while (_getch()) {
 		vector<cell> cells;
 		vector<vector<square>> place = fill(outsize, insize, cells);
 		vector<int> died_cells;
