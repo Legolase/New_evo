@@ -3,8 +3,11 @@
 #include <random>
 #include <conio.h>
 #include <windows.h>
+#include <fstream>
+#include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 
 class cell;
 
@@ -48,13 +51,20 @@ const int type_of_reaction = 6, fill_start = 5;
 
 
 int reproduct_energy = 70, max_age = 100;
-int act_price[] = { 3, 2, 5, 2, 1, 50 };
+const int act_price[] = { 3, 2, 5, 2, 1, reproduct_energy };
 //int act_price[] = { 1, 2, 3, 4, 5, 6 };
 const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2, 4 };
 const int reaction_gens = 10, action_gens = 100;
 
 const char meat = 177, bush = 206, empt = ' ', alive = 219;
 const int col_meat = 4, col_plants = 2;
+
+//===============================
+//Files constants
+
+const string name_file = "\\Best_genome_of_last_cell.txt";
+
+//===============================
 
 int rand(int left, int right) {
 	mt19937 gen{ random_device()() };
@@ -91,7 +101,7 @@ struct square {
 class cell {
 private:
 	const int  actgens{ action_gens }, regen{ reaction_gens };
-	int age, colour, previous_gen, previous_gen2;
+	int age, colour, previous_gen, previous_gen2, eat;
 	coordin course, hit_from;
 	bool bited;
 	vector<vector<int>> TOAR;
@@ -111,19 +121,31 @@ public:
 	coordin position;
 
 	cell() : energy(100), age(0), colour(cell_colour[rand(0, quan_cell_colour - 1)]), TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
-		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1) {
+		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1), eat(rand(0, 2)) {
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
 				if (i < 2)
 					TOAR[i][j] = _move[rand(0, (sizeof(_move) / sizeof(_move[0])) - i - 1)];
 				else if (i < 4)
 					TOAR[i][j] = meet[rand(0, (sizeof(meet) / sizeof(meet[0])) - 1)];
-				else if (i < 6)
+				else if (eat == 2)
 					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1)];
+				else if (i == 4)
+					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - abs(eat - 1))];
+				else if (i == 5)
+					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - eat)];
+				else {
+					cout << "Error: genome building wasn\'t right";
+					system("pause >nul");
+					exit(0);
+				}
+					
 			}
 	}
 	cell(const int& i) {}
-	void bear(cell& parent)  {
+	void bear(cell& parent) {
+		mt19937 gen{ random_device()() };
+		uniform_int_distribution<int> dist(0, 99);
 		energy = parent.energy / 2;
 		age = 0;
 		course = neighboor[rand(0, variants_of_move - 1)];
@@ -133,29 +155,46 @@ public:
 		previous_gen = -1;
 		previous_gen2 = -1;
 
-		if (rand(0, 99) < mutation)
+		if (dist(gen) < mutation)
 			colour = cell_colour[rand(0, quan_cell_colour - 1)];
 		else
 			colour = parent.colour;
 
-		if (rand(0, 99) < mutation)
-			colour = cell_colour[rand(0, quan_cell_colour - 1)];
+		if (dist(gen) < mutation)
+			eat = rand(0, 2);
 		else
-			colour = parent.colour;
+			eat = parent.eat;
 
-		TOAR.resize(type_of_reaction, vector<int> ((variants_of_move * regen) + actgens, -1));
+		TOAR.resize(type_of_reaction, vector<int>((variants_of_move * regen) + actgens, -1));
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
-				if (rand(0, 99) < mutation) {
+				if (dist(gen) < mutation) {
 					if (i < 2)
-						TOAR[i][j] = _move[rand(0, sizeof(_move) / sizeof(_move[0]) - i)];
+						TOAR[i][j] = _move[rand(0, (sizeof(_move) / sizeof(_move[0])) - i - 1)];
 					else if (i < 4)
-						TOAR[i][j] = meet[rand(0, sizeof(meet) / sizeof(meet[0]))];
-					else if (i < 6)
-						TOAR[i][j] = food[rand(0, sizeof(food) / sizeof(food[0]))];
+						TOAR[i][j] = meet[rand(0, (sizeof(meet) / sizeof(meet[0])) - 1)];
+					else if (eat == 2)
+						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1)];
+					else if (i == 4)
+						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - abs(eat - 1))];
+					else if (i == 5)
+						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - eat)];
+					else {
+						cout << "Error: genome building wasn\'t right";
+						system("pause >nul");
+						exit(0);
+					}
 				}
-				else
-					TOAR[i][j] = parent.TOAR[i][j];
+				else {
+					if ((i > 3) && (i < 6) && (eat != 2) && (TOAR[i][j] == 4)) {
+						if (i == 4 && eat == 0)
+							TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
+						else if (i == 5 && eat == 1)
+							TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
+					}
+					else
+						TOAR[i][j] = parent.TOAR[i][j];
+				}
 			}
 		parent.energy = energy;
 	}
@@ -170,6 +209,7 @@ public:
 		bited = a.bited;
 		TOAR = a.TOAR;
 		position = a.position;
+		eat = a.eat;
 		return *this;
 	}
 	int ahead(const vector<vector<square>>& sqar, const vector<cell>& cells) {
@@ -249,6 +289,7 @@ public:
 		}
 		return previous_gen2;
 	}
+	int geat() { return eat; }
 	vector<vector<int>> gTOAR() const { return TOAR; }
 	coordin gcourse() { return course; }
 	coordin ghit_from() { return hit_from; }
@@ -265,8 +306,9 @@ public:
 			for (int j = 0; j < TOAR[0].size(); ++j)
 				if (this->TOAR[i][j] != a.TOAR[i][j])
 					++counter;
-		if ((double(counter) / ((int)TOAR.size() * TOAR[0].size())) * 100 <= double(mutation))
+		if ((double(counter) / ((int)TOAR.size() * TOAR[0].size())) * 100 <= double(mutation)) {
 			return true;
+		}
 		return false;
 	}
 };
@@ -368,7 +410,7 @@ vector<vector<square>> fill(const int& xmax, const int& ymax, vector<cell>& cell
 	return place;
 }
 
-void show(vector<vector<square>> sqar, const int w, vector<cell>& cells) {
+void show(const vector<vector<square>> & sqar, const int w, const int statistic[]) {
 	const size_t outsize = (size_t)sqar.size(), insize = sqar[0].size();
 	cout << char(201);
 	for (size_t i = 0; i < outsize; ++i)
@@ -396,24 +438,92 @@ void show(vector<vector<square>> sqar, const int w, vector<cell>& cells) {
 
 	for (int i = 0; i < outsize; ++i)
 		cout << i % 10;
-	cout << "\n" << w << " \n";
-
-	/*for (int i = 0; i < cells.size(); ++i)
-		cout << cells[i].position.getx() << ' ' << cells[i].position.gety() << "\t== " << cells[i].energy << "     " << endl;
-	cout << "====\n";*/
+	cout << "\n " << w << " \n\n Herbivorous == " << statistic[0] << "       \n"
+		<< " Predator == " << statistic[1] << "       \n"
+		<< " Omnivorous == " << statistic[2] << "       \n";
 }
 
-void del(vector<cell>& cells, const int index) {
-	for (int i = index; i < cells.size() - 1; ++i)
-		cells[i] = cells[i + 1];
-	cells.pop_back();
+bool isfile(string way_to_file) {
+	ifstream f(way_to_file);
+	if (!f)
+		return false;
+	return true;
+}
+
+int lastsign(string s, char symbol) { //index
+	int index = -1;
+	if (s.size() != 0) {
+		for (int i = s.size() - 1; i >= 0; --i)
+			if (s[i] == symbol) {
+				index = i;
+				break;
+			}
+	}
+	return index;
+}
+
+void mkfile(string way_to_file, vector<string> lines) { //create a file with default lines in this
+	string w = way_to_file.substr(0, lastsign(way_to_file, '\\'));
+	fs::create_directories(w);
+	ofstream f(way_to_file);
+	if (lines.size() == 0)
+		f << "";
+	else {
+		for (size_t i = 0; i < lines.size() - 1; ++i)
+			f << lines[i] << endl;
+		f << lines[lines.size() - 1];
+	}
+	f.close();
+}
+
+string chegin() {
+	WCHAR buffer[MAX_PATH];
+	string way = "";
+	GetModuleFileName(NULL, buffer, sizeof(buffer) / sizeof(buffer[0]));
+	for (int i = 0; i < sizeof(buffer) / sizeof(buffer[0]); ++i)
+		way += buffer[i];
+	way = way.substr(0, lastsign(way, '\\')) + name_file;
+	if (isfile(way) == false) { //creating file with standard matrix of game map
+		string s = "";
+		vector<string> v(1,s);
+		mkfile(way, v);
+	}
+	else {}
+	return way;
+}
+
+void show_genome_cell(const string way_to_file, cell& a) {
+	const vector<vector<int>>& Toar = a.gTOAR();
+	const int outsize = (int)Toar.size(), insize = Toar[0].size();
+	ofstream f(way_to_file);
+	int lines = variants_of_move;
+	if (!f) {
+		cout << "Error: can\'t open file \"" << way_to_file << "\"";
+		system("pause >nul");
+		f.close();
+		exit(0);
+	}
+
+	f << "Eat: " << a.geat() << endl;
+	for (int j = insize - 1; j > -1; --j) {
+		for (int i = 0; i < outsize; ++i) {
+			f << Toar[i][j] << '\t';
+		}
+		f << endl;
+		if ((j % 10 == 0) && (lines > 0)) {
+			f << "===================\n";
+			--lines;
+		}
+	}
+	f.close();
 }
 
 int main(int argc, int* argv[]) {
 	mt19937 gen{ random_device()() };
 	uniform_int_distribution<int> dist(0, 99);
 
-	
+	const string way_to_file = chegin();
+
 	int outsize{ 40 }, insize{ 40 };
 	int timee = 0;
 	int year{ -1 };
@@ -426,10 +536,11 @@ int main(int argc, int* argv[]) {
 		vector<cell> cells;
 		vector<vector<square>> place = fill(outsize, insize, cells);
 		vector<int> died_cells;
+		int statistic[] = {0, 0, 0};
 
 		while (cells.size() > 0) {
 			//cout << "========================================================\n";
-			show(place, year, cells);
+			show(place, year, statistic);
 			setcur(0, 0);
 			Sleep(timee);
 			if (++year > year_cycle) {
@@ -446,17 +557,24 @@ int main(int argc, int* argv[]) {
 						}
 					}
 			}
+			{
+				statistic[0] = 0;
+				statistic[1] = 0;
+				statistic[2] = 0;
+			}
 
 			const int csize = cells.size();
 			for (int i = 0; i < csize; ++i) {
 				if (cells[i].gage() < max_age && cells[i].energy > 0) {
 					coordin temp1 = cells[i].position, r;
 					int way_b = 0;
-					
+
 					cells[i].increase_age();
 
 					int ahead = cells[i].ahead(place, cells), act;
 					const vector<vector<int>>& Toar = cells[i].gTOAR();
+					++statistic[cells[i].geat()];
+
 					if (cells[i].is_bited()) {
 						int q1, q2;
 						for (q1 = 0; q1 < variants_of_move; ++q1)
@@ -498,15 +616,17 @@ int main(int argc, int* argv[]) {
 				else {
 					died_cells.push_back(i);
 					place[cells[i].position.getx()][cells[i].position.gety()].set(meat, col_meat);
+					//place[cells[i].position.getx()][cells[i].position.gety()].set(empt, 7);
 				}
 				//show(place, year, cells);
 				//setcur(0, 0);
 			}
 
+			if (cells.size() == died_cells.size() && cells.size() != 0)
+				show_genome_cell(way_to_file, cells[0]);
+
 			for (int i = died_cells.size() - 1; i > -1; --i) {
-				//place[cells[died_cells[i]].position.getx()][cells[died_cells[i]].position.gety()].set(meat, col_meat);
 				cells.erase(cells.cbegin() + died_cells[i]);
-				//del(cells, died_cells[i]);
 			}
 			died_cells.clear();
 			died_cells.shrink_to_fit();
