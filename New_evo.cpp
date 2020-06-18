@@ -43,8 +43,10 @@ public:
 const coordin neighboor[] = { {1, 0}, {1,1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1} };
 const int variants_of_move = sizeof(neighboor) / sizeof(neighboor[0]);
 
-const int cell_colour[] = { 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-const int quan_cell_colour = sizeof(cell_colour) / sizeof(cell_colour[0]);
+//const int cell_colour[] = { 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+//const int cell_c_predator[] = { 12, 6, 14, 7 }, cell_c_herbivorious[] = { 15, 10, 11, 3 }, cell_c_omnivorous[] = { 9, 8, 13, 5 };
+const int eat_colour[][3] = { { 15, 10, 11 }, { 12, 6, 14 }, { 8, 13, 5 } };
+//const int quan_cell_colour = sizeof(cell_colour) / sizeof(cell_colour[0]);
 
 int year_cycle = 10, plants_year = 20, putrefaction_year = 40, mutation = 5, meat_energy = 60, plant_energy = 20;
 const int type_of_reaction = 6, fill_start = 5;
@@ -52,10 +54,8 @@ const int type_of_reaction = 6, fill_start = 5;
 
 int reproduct_energy = 70, max_age = 100;
 const int act_price[] = { 3, 2, 5, 2, 1, reproduct_energy };
-//int act_price[] = { 1, 2, 3, 4, 5, 6 };
-const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2, 4 };
-const int reaction_gens = 10, action_gens = 100;
-const int eat_colour[] = { 10, 12, 6 };
+const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2,  4 };
+const int reaction_gens = 10, action_gens = 150;
 
 const char meat = 177, bush = 206, empt = ' ', alive = 219;
 const int col_meat = 4, col_plants = 2;
@@ -102,7 +102,7 @@ struct square {
 class cell {
 private:
 	const int  actgens{ action_gens }, regen{ reaction_gens };
-	int age, colour, previous_gen, previous_gen2, eat;
+	int age, colour = 0, previous_gen, previous_gen2, eat;
 	coordin course, hit_from;
 	bool bited;
 	vector<vector<int>> TOAR;
@@ -122,9 +122,9 @@ public:
 	coordin position;
 
 	//cell& operator=(const cell& a);
-	cell() : energy(100), age(0)/*, colour(cell_colour[rand(0, quan_cell_colour - 1)])*/, TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
-		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1), eat(rand(0, 2)) {
-		//colour = eat_colour[eat];
+	cell() : energy(100), age(0),/* colour(cell_colour[rand(0, quan_cell_colour - 1)]),*/ TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
+		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1), eat(rand(0, 1)) {
+		colour = eat_colour[eat][rand(0, 2)];
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
 				if (i < 2)
@@ -142,29 +142,30 @@ public:
 					system("pause >nul");
 					exit(0);
 				}
-					
+
 			}
 	}
-	cell(cell *parent) : energy((*parent).energy / 2), age(0), course(neighboor[rand(0, variants_of_move - 1)]), hit_from( 0, 0 ), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1) {
+	cell(cell* parent) : energy((*parent).energy / 2), age(0), course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1) {
 		mt19937 gen{ random_device()() };
 		uniform_int_distribution<int> dist(0, 99);
-		
+
 		/*if (dist(gen) < mutation)
 			colour = cell_colour[rand(0, quan_cell_colour - 1)];
 		else
-			colour = parent.colour;*/
+			colour = (*parent).colour;*/
 
 		if (dist(gen) < mutation)
-			eat = rand(0, 2);
+			eat = rand(0, 1);
 		else
 			eat = (*parent).eat;
 
-		colour = eat_colour[eat];
+		colour = eat_colour[eat][rand(0, 2)];
+		int differ = abs(eat - (*parent).eat);
 
 		TOAR.resize(type_of_reaction, vector<int>((variants_of_move * regen) + actgens, -1));
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
-				if (dist(gen) < mutation) {
+				if (dist(gen) < mutation || (((i == 4) || (i == 5)) && differ >= 1)) {
 					if (i < 2)
 						TOAR[i][j] = _move[rand(0, (sizeof(_move) / sizeof(_move[0])) - i - 1)];
 					else if (i < 4)
@@ -182,11 +183,11 @@ public:
 					}
 				}
 				else {
-					if (i == 4 && eat == 0 && (*parent).TOAR[i][j] == 4)
+					/*if (i == 4 && eat == 0 && (*parent).TOAR[i][j] == 4)
 						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
 					else if (i == 5 && eat == 1 && (*parent).TOAR[i][j] == 4)
 						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
-					else
+					else*/
 						TOAR[i][j] = (*parent).TOAR[i][j];
 				}
 			}
@@ -404,7 +405,7 @@ vector<vector<square>> fill(const int& xmax, const int& ymax, vector<cell>& cell
 	return place;
 }
 
-void show(const vector<vector<square>> & sqar, const int w, const int statistic[]) {
+void show(const vector<vector<square>>& sqar, const int w, const int statistic[]) {
 	const size_t outsize = (size_t)sqar.size(), insize = sqar[0].size();
 	cout << char(201);
 	for (size_t i = 0; i < outsize; ++i)
@@ -471,28 +472,29 @@ void mkfile(string way_to_file, vector<string> lines) { //create a file with def
 }
 
 string chegin() {
-	WCHAR buffer[MAX_PATH];
-	string way = "";
+	wchar_t buffer[MAX_PATH];
+	wstring wway = L"";
 	GetModuleFileName(NULL, buffer, sizeof(buffer) / sizeof(buffer[0]));
-	for (int i = 0; i < sizeof(buffer) / sizeof(buffer[0]); ++i)
-		way += buffer[i];
+	wway = buffer;
+	string way(wway.begin(), wway.end());
 	way = way.substr(0, lastsign(way, '\\')) + name_file;
 	if (isfile(way) == false) { //creating file with standard matrix of game map
 		string s = "";
-		vector<string> v(1,s);
+		vector<string> v(1, s);
 		mkfile(way, v);
 	}
 	else {}
 	return way;
 }
 
-void show_genome_cell(const string way_to_file, cell& a) {
+void show_genome_cell(const string way_to_file1, cell& a) {
 	const vector<vector<int>>& Toar = a.gTOAR();
 	const int outsize = (int)Toar.size(), insize = Toar[0].size();
-	ofstream f(way_to_file);
+	ofstream f(way_to_file1);
 	int lines = variants_of_move;
+	int counter = 1;
 	if (!f) {
-		cout << "Error: can\'t open file \"" << way_to_file << "\"";
+		cout << "Error: can\'t open file \"" << way_to_file1 << "\"";
 		system("pause >nul");
 		f.close();
 		exit(0);
@@ -504,9 +506,10 @@ void show_genome_cell(const string way_to_file, cell& a) {
 			f << Toar[i][j] << '\t';
 		}
 		f << endl;
-		if ((j % 10 == 0) && (lines > 0)) {
+		if (++counter > reaction_gens && lines > 0) {
 			f << "===================\n";
 			--lines;
+			counter = 1;
 		}
 	}
 	f.close();
@@ -516,7 +519,7 @@ int main(int argc, int* argv[]) {
 	mt19937 gen{ random_device()() };
 	uniform_int_distribution<int> dist(0, 99);
 
-	const string way_to_file = chegin();
+	const string way_to_file1 = chegin();
 
 	int outsize{ 40 }, insize{ 40 };
 	int timee = 0;
@@ -530,13 +533,10 @@ int main(int argc, int* argv[]) {
 		vector<cell> cells;
 		vector<vector<square>> place = fill(outsize, insize, cells);
 		vector<int> died_cells;
-		int statistic[] = {0, 0, 0};
+		int statistic[] = { 0, 0, 0 };
 
 		while (cells.size() > 0) {
 			//cout << "========================================================\n";
-			show(place, year, statistic);
-			setcur(0, 0);
-			Sleep(timee);
 			if (++year > year_cycle) {
 				year = -1;
 				for (int i = 0; i < outsize; ++i)
@@ -616,13 +616,17 @@ int main(int argc, int* argv[]) {
 			}
 
 			if (cells.size() == died_cells.size() && cells.size() != 0)
-				show_genome_cell(way_to_file, cells[0]);
+				show_genome_cell(way_to_file1, cells[0]);
 
 			for (int i = died_cells.size() - 1; i > -1; --i) {
 				cells.erase(cells.cbegin() + died_cells[i]);
 			}
 			died_cells.clear();
 			died_cells.shrink_to_fit();
+
+			Sleep(timee);
+			show(place, year, statistic);
+			setcur(0, 0);
 
 			if (_kbhit()) {
 				char cn = _getch();
