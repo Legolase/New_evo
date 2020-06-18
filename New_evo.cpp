@@ -55,6 +55,7 @@ const int act_price[] = { 3, 2, 5, 2, 1, reproduct_energy };
 //int act_price[] = { 1, 2, 3, 4, 5, 6 };
 const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2, 4 };
 const int reaction_gens = 10, action_gens = 100;
+const int eat_colour[] = { 10, 12, 6 };
 
 const char meat = 177, bush = 206, empt = ' ', alive = 219;
 const int col_meat = 4, col_plants = 2;
@@ -120,8 +121,10 @@ public:
 	int energy;
 	coordin position;
 
-	cell() : energy(100), age(0), colour(cell_colour[rand(0, quan_cell_colour - 1)]), TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
+	//cell& operator=(const cell& a);
+	cell() : energy(100), age(0)/*, colour(cell_colour[rand(0, quan_cell_colour - 1)])*/, TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
 		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1), eat(rand(0, 2)) {
+		//colour = eat_colour[eat];
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
 				if (i < 2)
@@ -142,28 +145,21 @@ public:
 					
 			}
 	}
-	cell(const int& i) {}
-	void bear(cell& parent) {
+	cell(cell *parent) : energy((*parent).energy / 2), age(0), course(neighboor[rand(0, variants_of_move - 1)]), hit_from( 0, 0 ), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1) {
 		mt19937 gen{ random_device()() };
 		uniform_int_distribution<int> dist(0, 99);
-		energy = parent.energy / 2;
-		age = 0;
-		course = neighboor[rand(0, variants_of_move - 1)];
-		hit_from = { 0, 0 };
-		position = { 0, 0 };
-		bited - false;
-		previous_gen = -1;
-		previous_gen2 = -1;
-
-		if (dist(gen) < mutation)
+		
+		/*if (dist(gen) < mutation)
 			colour = cell_colour[rand(0, quan_cell_colour - 1)];
 		else
-			colour = parent.colour;
+			colour = parent.colour;*/
 
 		if (dist(gen) < mutation)
 			eat = rand(0, 2);
 		else
-			eat = parent.eat;
+			eat = (*parent).eat;
+
+		colour = eat_colour[eat];
 
 		TOAR.resize(type_of_reaction, vector<int>((variants_of_move * regen) + actgens, -1));
 		for (int i = 0; i < type_of_reaction; ++i)
@@ -186,17 +182,15 @@ public:
 					}
 				}
 				else {
-					if ((i > 3) && (i < 6) && (eat != 2) && (TOAR[i][j] == 4)) {
-						if (i == 4 && eat == 0)
-							TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
-						else if (i == 5 && eat == 1)
-							TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
-					}
+					if (i == 4 && eat == 0 && (*parent).TOAR[i][j] == 4)
+						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
+					else if (i == 5 && eat == 1 && (*parent).TOAR[i][j] == 4)
+						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
 					else
-						TOAR[i][j] = parent.TOAR[i][j];
+						TOAR[i][j] = (*parent).TOAR[i][j];
 				}
 			}
-		parent.energy = energy;
+		(*parent).energy = energy;
 	}
 	cell& operator=(const cell& a) {
 		energy = a.energy;
@@ -592,8 +586,7 @@ int main(int argc, int* argv[]) {
 					else {
 						coordin step = cells[i].position + cells[i].gcourse();
 						if (cells[i].energy > reproduct_energy && step < place && ((ahead == 0) || (ahead == 4) || (ahead == 5))) {
-							cell child(1);
-							child.bear(cells[i]);
+							cell child(&cells[i]);
 							child.position = { cells[i].position.getx(), cells[i].position.gety() };
 							place[cells[i].position.getx()][cells[i].position.gety()].set(alive, child.gcolour());
 							cells.push_back(child);
