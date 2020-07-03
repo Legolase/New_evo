@@ -43,18 +43,18 @@ public:
 const coordin neighboor[] = { {1, 0}, {1,1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1} };
 const int variants_of_move = sizeof(neighboor) / sizeof(neighboor[0]);
 
-//const int cell_colour[] = { 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+const int cell_colour[] = { 1, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
 //const int cell_c_predator[] = { 12, 6, 14, 7 }, cell_c_herbivorious[] = { 15, 10, 11, 3 }, cell_c_omnivorous[] = { 9, 8, 13, 5 };
-const int eat_colour[][3] = { { 15, 10, 11 }, { 12, 6, 14 }, { 8, 13, 5 } };
-//const int quan_cell_colour = sizeof(cell_colour) / sizeof(cell_colour[0]);
+//const int eat_colour[][3] = { { 15, 10, 11 }, { 12, 6, 14 }, { 8, 13, 5 } };
+const int quan_cell_colour = sizeof(cell_colour) / sizeof(cell_colour[0]);
 
-int year_cycle = 10, plants_year = 20, putrefaction_year = 40, mutation = 5, meat_energy = 60, plant_energy = 20;
+int year_cycle = 10, plants_year = 20, putrefaction_year = 20, mutation = 5, meat_energy = 60, plant_energy = 20;
 const int type_of_reaction = 6, fill_start = 5;
 
 
 int reproduct_energy = 70, max_age = 100;
-const int act_price[] = { 3, 2, 5, 2, 1, reproduct_energy };
-const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2,  4 };
+const int act_price[] = { 3, 2, 5, 2, 1, 50 };
+const int _move[] = { 0, 1, 2, 3 }, meet[] = { 0, 1, 2, 5 }, food[] = { 0, 1, 2, 4 };
 const int reaction_gens = 10, action_gens = 150;
 
 const char meat = 177, bush = 206, empt = ' ', alive = 219;
@@ -87,56 +87,55 @@ void setcur(int x, int y) // вывод без мерцания
 }
 
 struct square {
-	char c;
-	int colour;
+	char c, low_c;
+	int colour, low_colour;
 
-	square() : c(empt), colour(7) {}
-	square(const char c1) : c(c1), colour(7) {}
-	square(const char c1, const int colour1) : c(c1), colour(colour1) {}
+	square() : c(empt), colour(7), low_c(empt), low_colour(7) {}
+	square(const char c1) : c(c1), colour(7), low_c(empt), low_colour(7) {}
+	square(const char c1, const int colour1) : c(c1), colour(colour1), low_c(empt), low_colour(7) {}
 	void set(const char c1, const int colour1) {
 		c = c1;
 		colour = colour1;
+	}
+	void undset(const char c1, const int colour1) {
+		low_c = c1;
+		low_colour = colour1;
 	}
 };
 
 class cell {
 private:
 	const int  actgens{ action_gens }, regen{ reaction_gens };
-	int age, colour = 0, previous_gen, previous_gen2, eat;
+	int age, colour = 0, previous_gen, previous_gen2;
 	coordin course, hit_from;
 	bool bited;
 	vector<vector<int>> TOAR;
-	bool revative(cell& met) {
+	bool relative(const cell& met) const {
 		int counter{};
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j)
-				if (TOAR[i][j] != met.TOAR[i][j])
+				if (this->TOAR[i][j] != met.TOAR[i][j])
 					++counter;
-		if ((double(counter) / (type_of_reaction * TOAR[0].size())) * 100 < double(mutation) * 2)
+		if ((double(counter) / ((int)TOAR.size() * TOAR[0].size())) * 100 <= double(mutation)) {
 			return true;
-		else
-			return false;
+		}
+		return false;
 	}
 public:
 	int energy;
 	coordin position;
 
 	//cell& operator=(const cell& a);
-	cell() : energy(100), age(0),/* colour(cell_colour[rand(0, quan_cell_colour - 1)]),*/ TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
-		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1), eat(rand(0, 1)) {
-		colour = eat_colour[eat][rand(0, 2)];
+	cell() : energy(100), age(0), colour(cell_colour[rand(0, quan_cell_colour - 1)]), TOAR(type_of_reaction, vector<int>((variants_of_move* regen) + actgens, -1)),
+		course(neighboor[rand(0, variants_of_move - 1)]), hit_from(0, 0), position(0, 0), bited(false), previous_gen(-1), previous_gen2(-1) {
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
 				if (i < 2)
 					TOAR[i][j] = _move[rand(0, (sizeof(_move) / sizeof(_move[0])) - i - 1)];
 				else if (i < 4)
 					TOAR[i][j] = meet[rand(0, (sizeof(meet) / sizeof(meet[0])) - 1)];
-				else if (eat == 2)
+				else if (i < 6)
 					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1)];
-				else if (i == 4)
-					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - abs(eat - 1))];
-				else if (i == 5)
-					TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - eat)];
 				else {
 					cout << "Error: genome building wasn\'t right";
 					system("pause >nul");
@@ -149,47 +148,29 @@ public:
 		mt19937 gen{ random_device()() };
 		uniform_int_distribution<int> dist(0, 99);
 
-		/*if (dist(gen) < mutation)
+		if (dist(gen) < mutation)
 			colour = cell_colour[rand(0, quan_cell_colour - 1)];
 		else
-			colour = (*parent).colour;*/
-
-		if (dist(gen) < mutation)
-			eat = rand(0, 1);
-		else
-			eat = (*parent).eat;
-
-		colour = eat_colour[eat][rand(0, 2)];
-		int differ = abs(eat - (*parent).eat);
+			colour = (*parent).colour;
 
 		TOAR.resize(type_of_reaction, vector<int>((variants_of_move * regen) + actgens, -1));
 		for (int i = 0; i < type_of_reaction; ++i)
 			for (int j = 0; j < TOAR[0].size(); ++j) {
-				if (dist(gen) < mutation || (((i == 4) || (i == 5)) && differ >= 1)) {
+				if (rand(0, 99) < mutation) {
 					if (i < 2)
 						TOAR[i][j] = _move[rand(0, (sizeof(_move) / sizeof(_move[0])) - i - 1)];
 					else if (i < 4)
 						TOAR[i][j] = meet[rand(0, (sizeof(meet) / sizeof(meet[0])) - 1)];
-					else if (eat == 2)
+					else if (i < 6)
 						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1)];
-					else if (i == 4)
-						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - abs(eat - 1))];
-					else if (i == 5)
-						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 1 - eat)];
 					else {
 						cout << "Error: genome building wasn\'t right";
 						system("pause >nul");
 						exit(0);
 					}
 				}
-				else {
-					/*if (i == 4 && eat == 0 && (*parent).TOAR[i][j] == 4)
-						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
-					else if (i == 5 && eat == 1 && (*parent).TOAR[i][j] == 4)
-						TOAR[i][j] = food[rand(0, (sizeof(food) / sizeof(food[0])) - 2)];
-					else*/
-						TOAR[i][j] = (*parent).TOAR[i][j];
-				}
+				else
+					TOAR[i][j] = (*parent).TOAR[i][j];
 			}
 		(*parent).energy = energy;
 	}
@@ -204,7 +185,6 @@ public:
 		bited = a.bited;
 		TOAR = a.TOAR;
 		position = a.position;
-		eat = a.eat;
 		return *this;
 	}
 	int ahead(const vector<vector<square>>& sqar, const vector<cell>& cells) {
@@ -217,8 +197,8 @@ public:
 			else if (sqar[step.getx()][step.gety()].c == bush)
 				return 5;
 			else if (sqar[step.getx()][step.gety()].c == alive) {
-				int i{};
-				bool found{ false };
+				int i = 0;
+				bool found = false;
 				for (i = 0; i < cells.size(); ++i)
 					if (cells[i].position == step) {
 						found = true;
@@ -284,24 +264,12 @@ public:
 		}
 		return previous_gen2;
 	}
-	int geat() { return eat; }
 	vector<vector<int>> gTOAR() const { return TOAR; }
 	coordin gcourse() { return course; }
 	coordin ghit_from() { return hit_from; }
 	bool is_bited() {
 		if (bited) {
 			bited = false;
-			return true;
-		}
-		return false;
-	}
-	bool relative(const cell& a) const {
-		int counter{};
-		for (int i = 0; i < type_of_reaction; ++i)
-			for (int j = 0; j < TOAR[0].size(); ++j)
-				if (this->TOAR[i][j] != a.TOAR[i][j])
-					++counter;
-		if ((double(counter) / ((int)TOAR.size() * TOAR[0].size())) * 100 <= double(mutation)) {
 			return true;
 		}
 		return false;
@@ -333,7 +301,8 @@ void work(vector<vector<square>>& place, vector<cell>& cells, int& i, int& act, 
 		}
 		else if (act == 3) {
 			if (step < place) {
-				place[cells[i].position.getx()][cells[i].position.gety()].set(empt, 7);
+				place[cells[i].position.getx()][cells[i].position.gety()].set(place[cells[i].position.getx()][cells[i].position.gety()].low_c, place[cells[i].position.getx()][cells[i].position.gety()].low_colour);
+				place[step.getx()][step.gety()].undset(place[step.getx()][step.gety()].c, place[step.getx()][step.gety()].colour);
 				place[step.getx()][step.gety()].set(alive, cells[i].gcolour());
 				cells[i].position = step;
 			}
@@ -342,7 +311,7 @@ void work(vector<vector<square>>& place, vector<cell>& cells, int& i, int& act, 
 		}
 		else if (act == 4) {
 			if (step < place) {
-				place[cells[i].position.getx()][cells[i].position.gety()].set(empt, 7);
+				place[cells[i].position.getx()][cells[i].position.gety()].set(place[cells[i].position.getx()][cells[i].position.gety()].low_c, place[cells[i].position.getx()][cells[i].position.gety()].low_colour);
 				if (place[step.getx()][step.gety()].c == bush)
 					cells[i].energy = cells[i].energy + plant_energy;
 				else if (place[step.getx()][step.gety()].c == meat)
@@ -352,6 +321,7 @@ void work(vector<vector<square>>& place, vector<cell>& cells, int& i, int& act, 
 					system("pause >nul");
 					exit(0);
 				}
+				place[step.getx()][step.gety()].undset(empt, 7);
 				place[step.getx()][step.gety()].set(alive, cells[i].gcolour());
 				cells[i].position = step;
 			}
@@ -405,7 +375,7 @@ vector<vector<square>> fill(const int& xmax, const int& ymax, vector<cell>& cell
 	return place;
 }
 
-void show(const vector<vector<square>>& sqar, const int w, const int statistic[]) {
+void show(const vector<vector<square>>& sqar, const vector<string> comments, const vector<int> arr) {
 	const size_t outsize = (size_t)sqar.size(), insize = sqar[0].size();
 	cout << char(201);
 	for (size_t i = 0; i < outsize; ++i)
@@ -433,9 +403,17 @@ void show(const vector<vector<square>>& sqar, const int w, const int statistic[]
 
 	for (int i = 0; i < outsize; ++i)
 		cout << i % 10;
-	cout << "\n " << w << " \n\n Herbivorous == " << statistic[0] << "       \n"
-		<< " Predator == " << statistic[1] << "       \n"
-		<< " Omnivorous == " << statistic[2] << "       \n";
+	cout << endl;
+	cout << endl;
+
+	if (comments.size() != arr.size()){
+		cout << "Error: quantity of parametsr is not such as quantity of comments\n";
+		system("pause >nul");
+		exit(-12);
+	}
+
+	for (int i = 0; i < arr.size(); ++i)
+		cout  << comments[i] << " \t == \t " << arr[i] << "                     \n";
 }
 
 bool isfile(string way_to_file) {
@@ -500,7 +478,6 @@ void show_genome_cell(const string way_to_file1, cell& a) {
 		exit(0);
 	}
 
-	f << "Eat: " << a.geat() << endl;
 	for (int j = insize - 1; j > -1; --j) {
 		for (int i = 0; i < outsize; ++i) {
 			f << Toar[i][j] << '\t';
@@ -521,7 +498,7 @@ int main(int argc, int* argv[]) {
 
 	const string way_to_file1 = chegin();
 
-	int outsize{ 40 }, insize{ 40 };
+	int outsize{ 50 }, insize{ 50 };
 	int timee = 0;
 	int year{ -1 };
 	if (argc > 1) {
@@ -533,12 +510,13 @@ int main(int argc, int* argv[]) {
 		vector<cell> cells;
 		vector<vector<square>> place = fill(outsize, insize, cells);
 		vector<int> died_cells;
-		int statistic[] = { 0, 0, 0 };
+		int iterat = 0;
 
 		while (cells.size() > 0) {
 			//cout << "========================================================\n";
 			if (++year > year_cycle) {
-				year = -1;
+				year = 0;
+				++iterat;
 				for (int i = 0; i < outsize; ++i)
 					for (int j = 0; j < insize; ++j) {
 						if (place[i][j].c == empt) {
@@ -551,11 +529,6 @@ int main(int argc, int* argv[]) {
 						}
 					}
 			}
-			{
-				statistic[0] = 0;
-				statistic[1] = 0;
-				statistic[2] = 0;
-			}
 
 			const int csize = cells.size();
 			for (int i = 0; i < csize; ++i) {
@@ -567,7 +540,6 @@ int main(int argc, int* argv[]) {
 
 					int ahead = cells[i].ahead(place, cells), act;
 					const vector<vector<int>>& Toar = cells[i].gTOAR();
-					++statistic[cells[i].geat()];
 
 					if (cells[i].is_bited()) {
 						int q1, q2;
@@ -591,8 +563,9 @@ int main(int argc, int* argv[]) {
 							place[cells[i].position.getx()][cells[i].position.gety()].set(alive, child.gcolour());
 							cells.push_back(child);
 							cells[i].position = step;
+							place[step.getx()][step.gety()].low_c = place[step.getx()][step.gety()].c;
+							place[step.getx()][step.gety()].low_colour = place[step.getx()][step.gety()].colour;
 							place[step.getx()][step.gety()].set(alive, cells[i].gcolour());
-
 						}
 						else {
 							act = Toar[ahead][cells[i].ggen()];
@@ -601,7 +574,7 @@ int main(int argc, int* argv[]) {
 					}
 					r = temp1 - cells[i].position;
 					if ((abs(r.getx()) > 1) || (abs(r.gety()) > 1)) {
-						cout << "Upps! We found!!!\n" << way_b;
+						cout << "Upps! We found teleportation!!!\n" << way_b;
 						system("pause >nul");
 						system("cls");
 					}
@@ -609,10 +582,12 @@ int main(int argc, int* argv[]) {
 				else {
 					died_cells.push_back(i);
 					place[cells[i].position.getx()][cells[i].position.gety()].set(meat, col_meat);
+					place[cells[i].position.getx()][cells[i].position.gety()].undset(empt, 7);
 					//place[cells[i].position.getx()][cells[i].position.gety()].set(empt, 7);
 				}
-				//show(place, year, cells);
-				//setcur(0, 0);
+				/*Sleep(timee);
+				show(place, {}, {});
+				setcur(0, 0);*/
 			}
 
 			if (cells.size() == died_cells.size() && cells.size() != 0)
@@ -625,7 +600,7 @@ int main(int argc, int* argv[]) {
 			died_cells.shrink_to_fit();
 
 			Sleep(timee);
-			show(place, year, statistic);
+			show(place, {"Year", "The day of year", "Quantity of cells", "Mutation (%)", "Grown plants (% / year)", "Rot (% / year)", }, { iterat, year, (int)cells.size(), mutation, plants_year, putrefaction_year });
 			setcur(0, 0);
 
 			if (_kbhit()) {
@@ -642,6 +617,7 @@ int main(int argc, int* argv[]) {
 					cin >> timee;
 				system("cls");
 			}
+			//system("pause >nul");
 		}
 	}
 }
